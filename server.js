@@ -3,7 +3,10 @@ require("dotenv").config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+
 const userRouter = require('./routes/userRoutes');
+const webRouter = require('./routes/webRoute');
+
 require('./config/dbConnection')
 
 const app = express();
@@ -15,6 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cors());
 
 app.use('/api', userRouter);
+app.use('/', webRouter);
 
 app.use((err, req, res, next) => {
 
