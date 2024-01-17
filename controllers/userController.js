@@ -3,6 +3,9 @@ const db = require('../config/dbConnection')
 const bcrypt = require('bcryptjs');
 const randomstring = require('randomstring')
 const sendMail = require('../helpers/sendMail');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = process.env
+const { isAthorize } = require('../middleware/auth')
 
 const register = (req, res) => {
     const errors = validationResult(req);
@@ -73,7 +76,7 @@ const verifyMail = (req, res) => {
 
         if (result.length > 0) {
 
-            db.query(`UPDATE users SET token = null, is_verified = 1 WHERE id = '${[result][0].id}'`);
+            db.query(`UPDATE users SET token = null, is_verified = 1 WHERE id = '${result[0].id}'`);
             return res.render('mail-verification', { message: 'Mail verified successfully' });
 
 
@@ -85,7 +88,70 @@ const verifyMail = (req, res) => {
 
 }
 
+const login = (req, res) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() })
+    }
+
+    db.query(`SELECT * FROM users WHERE LOWER(email)= LOWER(${db.escape(req.body.email)});`, (err, result) => {
+        if (err) {
+            return res.status(400).send({
+                msg: err
+            })
+        }
+
+        if (!result.length) {
+            return res.status(400).send({
+                msg: "Email or password is incorrect"
+            })
+        }
+
+        bcrypt.compare(req.body.password, result[0]['password'], (bErr, bResult) => {
+            if (bErr) {
+                return res.status(400).send({
+                    msg: err
+                })
+            }
+
+            if (bResult) {
+                const jToken = jwt.sign({ id: result[0]['id'], is_admin: result[0]['is_admin'] }, JWT_SECRET, { expiresIn: '1h' })
+                db.query(`UPDATE users SET last_login = now() WHERE id='${result[0]['id']}'`);
+
+                return res.status(200).send({
+                    msg: 'User Logged in successfully',
+                    jtoken: jToken,
+                    user: result[0]
+                })
+
+            }
+
+            return res.status(400).send({
+                msg: "Email or password is incorrect"
+            })
+
+        })
+
+    })
+
+}
+
+const getUser = (req, res) => {
+    const authToken = req.headers.authorization.split(' ')[1];
+    const decode = jwt.verify(authToken, JWT_SECRET);
+
+    db.query('SELECT * FROM users WHERE id=?', decode.id, function(err, result, fields) {
+        if (err) throw err;
+
+        return res.status(200).send({ success: true, data: result[0], msg: 'User Fetch Successfully' })
+    })
+
+}
+
 module.exports = {
     register,
-    verifyMail
+    verifyMail,
+    login,
+    getUser
 }

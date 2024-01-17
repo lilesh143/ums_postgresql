@@ -11,6 +11,10 @@ exports.signUpValidator = [
             return false;
         }
     }).withMessage('Please upload an image type PNG, JPEG')
+]
 
 
+exports.loginValidator = [
+    check('email', 'Please enter valid email').isEmail().normalizeEmail({ gmail_remove_dots: true }),
+    check('password', 'Password min 6 length').isLength({ min: 6 }),
 ]

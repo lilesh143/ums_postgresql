@@ -24,10 +24,14 @@ const upload = multer({
 });
 
 
-const { signUpValidator } = require('../helpers/validation');
+const { signUpValidator, loginValidator } = require('../helpers/validation');
 const userController = require('../controllers/userController')
+const { isAuthorize } = require('../middleware/auth')
+
 
 
 router.post('/register', upload.single('image'), signUpValidator, userController.register);
+router.post('/login', loginValidator, userController.login);
+router.get('/get-user', isAuthorize, userController.getUser)
 
 module.exports = router;
