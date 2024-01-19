@@ -149,9 +149,51 @@ const getUser = (req, res) => {
 
 }
 
+const forgetPassword = (req, res) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() })
+    }
+
+    const email = req.body.email;
+
+    db.query('SELECT * FROM users WHERE email=? limit 1', email, (err, result) => {
+
+        if (err) {
+            return res.status(400).send({
+                msg: err
+            })
+        }
+
+        if (result.length > 0) {
+            const mailSubject = 'Forget Password';
+            const randomString = randomstring.generate()
+            const content = `<p> Hii ${result[0].name}, Please Click <a href="http://localhost:3000/reset-password?token=${randomString}"> Here </a> to Reset Password </p>`
+
+            sendMail(email, mailSubject, content);
+
+            db.query(`DELETE FROM password_reset WHERE email=${db.escape(result[0].email)}`);
+
+            db.query(`INSERT INTO password_reset (email, token) VALUES(${db.escape(result[0].email)}, '${randomString}') `);
+
+            return res.status(200).send({
+                msg: 'Reset Mail sent Successfully'
+            })
+        }
+
+        return res.status(401).send({
+            msg: 'Email does not exist'
+        })
+
+    })
+
+}
+
 module.exports = {
     register,
     verifyMail,
     login,
-    getUser
+    getUser,
+    forgetPassword
 }

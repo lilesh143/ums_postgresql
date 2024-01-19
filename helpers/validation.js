@@ -18,3 +18,7 @@ exports.loginValidator = [
     check('email', 'Please enter valid email').isEmail().normalizeEmail({ gmail_remove_dots: true }),
     check('password', 'Password min 6 length').isLength({ min: 6 }),
 ]
+
+exports.forgetValidator = [
+    check('email', 'Please enter correct email').isEmail().normalizeEmail({ gmail_remove_dots: true }),
+]

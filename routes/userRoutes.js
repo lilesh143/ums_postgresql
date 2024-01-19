@@ -24,7 +24,7 @@ const upload = multer({
 });
 
 
-const { signUpValidator, loginValidator } = require('../helpers/validation');
+const { signUpValidator, loginValidator, forgetValidator } = require('../helpers/validation');
 const userController = require('../controllers/userController')
 const { isAuthorize } = require('../middleware/auth')
 
@@ -32,6 +32,7 @@ const { isAuthorize } = require('../middleware/auth')
 
 router.post('/register', upload.single('image'), signUpValidator, userController.register);
 router.post('/login', loginValidator, userController.login);
-router.get('/get-user', isAuthorize, userController.getUser)
+router.get('/get-user', isAuthorize, userController.getUser);
+router.post('/forget-password', forgetValidator, userController.forgetPassword)
 
 module.exports = router;
