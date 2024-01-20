@@ -22,3 +22,9 @@ exports.loginValidator = [
 exports.forgetValidator = [
     check('email', 'Please enter correct email').isEmail().normalizeEmail({ gmail_remove_dots: true }),
 ]
+
+exports.updateValidator = [
+    check('name', 'Name is require').not().isEmpty(),
+    check('email', 'Please enter valid email').isEmail().normalizeEmail({ gmail_remove_dots: true }),
+
+]

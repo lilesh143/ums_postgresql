@@ -116,7 +116,7 @@ const login = (req, res) => {
             }
 
             if (bResult) {
-                const jToken = jwt.sign({ id: result[0]['id'], is_admin: result[0]['is_admin'] }, JWT_SECRET, { expiresIn: '1h' })
+                const jToken = jwt.sign({ id: result[0]['id'], is_admin: result[0]['is_admin'] }, JWT_SECRET, { expiresIn: "1h" })
                 db.query(`UPDATE users SET last_login = now() WHERE id='${result[0]['id']}'`);
 
                 return res.status(200).send({
@@ -190,10 +190,144 @@ const forgetPassword = (req, res) => {
 
 }
 
+const resetPasswordLoad = (req, res) => {
+
+    try {
+
+        const token = req.query.token;
+        if (token == undefined) {
+            return res.render('404');
+        }
+
+        db.query(`SELECT * FROM password_reset WHERE token=? limit 1`, token, function(error, result, fields) {
+
+            if (error) {
+                console.log(error.message);
+            }
+
+            if (result !== undefined && result.length > 0) {
+
+                db.query(`SELECT * FROM users WHERE email=? limit 1`, result[0].email, function(error, result, fields) {
+
+                    if (error) {
+                        console.log(error.message);
+                    }
+
+                    res.render('reset-password', { user: result[0] })
+
+                })
+
+            } else {
+                return res.render('404');
+            }
+
+        })
+
+    } catch (error) {
+        console.log(error.message);
+
+    }
+}
+
+const resetPassword = (req, res) => {
+
+    console.log(req.body.user_id, req.body.user_email);
+
+    if (req.body.password != req.body.confirm_password) {
+        res.render('reset-password', { error_message: "Password does not match", user: { id: req.body.user_id, email: req.body.user_email } });
+
+        // console.log(req.body.password, req.body.confirm_password);
+
+    } else {
+
+
+        bcrypt.genSalt(10, function(err, salt) {
+            bcrypt.hash(req.body.confirm_password, 10, function(err, hash) {
+                // Store hash in your password DB.
+
+                if (err) {
+                    console.log(err);
+                } else {
+
+                    db.query(`DELETE FROM password_reset WHERE email='${req.body.user_email}'`);
+
+                    db.query(`UPDATE users SET password = '${hash}' WHERE id = '${req.body.user_id}'`);
+
+                    return res.render('updateMsg', { message: 'Password reset successfully' });
+                }
+            });
+        });
+
+
+        // console.log(req.body.password, req.body.confirm_password);
+        // bcrypt.hash(req.body.comfirm_password, 10, (err, hash) => {
+
+        //     if (err) {
+        //         console.log(err);
+        //     } else {
+
+        //         db.query(`DELETE FROM password_reset WHERE email='${req.body.user_email}'`);
+
+        //         db.query(`UPDATE users SET password = '${hash}' WHERE id = '${req.body.user_id}'`);
+
+        //         return res.render('updateMsg', { message: 'Password reset successfully' });
+        //     }
+
+        // })
+    }
+
+
+}
+
+const updateProfile = (req, res) => {
+
+    try {
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() })
+        }
+
+        const authToken = req.headers.authorization.split(' ')[1];
+        const decode = jwt.verify(authToken, JWT_SECRET);
+
+        var sql = '',
+            data;
+
+        if (req.file != undefined) {
+
+            sql = 'UPDATE users SET name = ?, email = ?, image = ? WHERE id = ?';
+            data = [req.body.name, req.body.email, 'images/' + req.file.filename, decode.id];
+
+        } else {
+            sql = 'UPDATE users SET name = ?, email = ? WHERE id = ?';
+            data = [req.body.name, req.body.email, decode.id];
+
+        }
+
+        db.query(sql, data, function(error, result, fields) {
+            if (error) {
+                res.status(400).send({ msg: error })
+            }
+
+            res.status(200).send({
+                msg: 'Profile updated successfully'
+            })
+        })
+
+    } catch (error) {
+        return res.status(400).json({ msg: error.message })
+    }
+
+}
+
 module.exports = {
     register,
     verifyMail,
     login,
     getUser,
-    forgetPassword
+    forgetPassword,
+    resetPasswordLoad,
+    resetPassword,
+    updateProfile
 }
